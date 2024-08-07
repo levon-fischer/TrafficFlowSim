@@ -4,7 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 
 public class TimePanel extends JPanel {
-    private JLabel timeLabel;
+    private final JLabel timeLabel;
 
     public TimePanel() {
         timeLabel = new JLabel("Time: 0 seconds");

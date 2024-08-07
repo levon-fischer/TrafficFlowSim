@@ -1,40 +1,61 @@
 package trafficflowsim.threads;
 
-import trafficflowsim.gui.CarPanel;
+import trafficflowsim.gui.RoadPanel;
+import trafficflowsim.models.Car;
 
 public class CarThread extends Thread {
-    private CarPanel carPanel;
-    private boolean running;
-    private double[] speeds;
-    private double[] positions;
+    private final Car car;
+    private final RoadPanel roadPanel;
+    private final Object pauseLock = new Object();
+    private volatile boolean running = true;
+    private volatile boolean paused = false;
 
-    public CarThread(CarPanel carPanel) {
-        this.carPanel = carPanel;
-        this.running = true;
-        this.speeds = new double[]{30, 40, 50}; // Initial speeds for cars
-        this.positions = new double[3]; // Initial positions for cars
+    public CarThread(Car car, RoadPanel roadPanel) {
+        this.car = car;
+        this.roadPanel = roadPanel;
     }
 
     @Override
     public void run() {
         while (running) {
-            try {
-                Thread.sleep(1000); // Update every second
-                updateCarPositions();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
+            synchronized (pauseLock) {
+                while (paused) {
+                    try {
+                        pauseLock.wait();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
 
-    private void updateCarPositions() {
-        for (int i = 0; i < positions.length; i++) {
-            positions[i] += speeds[i] / 3.6; // Convert speed from km/h to m/s
-            carPanel.updateCar(i, speeds[i], positions[i]);
+                car.updatePosition();
+                if (car.shouldStopAtRedLight(roadPanel)) {
+                    car.stop();
+                } else {
+                    car.resume();
+                }
+                roadPanel.updateRoad();
+            }
+             try {
+                 Thread.sleep(1000); // Update every second
+             } catch (InterruptedException e) {
+                 Thread.currentThread().interrupt();
+             }
         }
     }
 
     public void stopRunning() {
         running = false;
+        resumeRunning(); // Ensure any pause threads are resumed so they can exit
+    }
+
+    public void pauseRunning() {
+        paused = true;
+    }
+
+    public void resumeRunning() {
+        synchronized (pauseLock) {
+            paused = false;
+            pauseLock.notifyAll();
+        }
     }
 }
