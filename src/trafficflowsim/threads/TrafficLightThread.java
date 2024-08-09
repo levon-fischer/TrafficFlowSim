@@ -41,11 +41,6 @@ public class TrafficLightThread extends Thread {
         }
     }
 
-    public void stopRunning() {
-        running = false;
-        resumeRunning(); // Ensure any pause threads are resumed so they can exit
-    }
-
     public void pauseRunning() {
         paused = true;
     }
